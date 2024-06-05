@@ -16,7 +16,9 @@
                 <div class="col col-lg-9 col-xl-7">
                     <div class="card rounded-3">
                         <div class="card-body p-4">
+                            <div id="alertContainer">
 
+                            </div>
                             <h4 class="text-center my-3 pb-3">PHP - Simple To Do List App</h4>
 
                             <div class="row row-cols-lg-auto g-3 justify-content-center align-items-center mb-4 pb-2">
@@ -28,17 +30,12 @@
                                 </div>
 
                                 <div class="col-12">
-                                    <button type="submit" id='save' data-mdb-button-init data-mdb-ripple-init
+                                    <button type="submit" id='saveTaskBtn' data-mdb-button-init data-mdb-ripple-init
                                         class="btn btn-primary">Save</button>
-                                </div>
-
-                                <div class="col-12">
-                                    <button type="submit" id='get_task' data-mdb-button-init data-mdb-ripple-init
-                                        class="btn btn-warning">Get tasks</button>
                                 </div>
                             </div>
 
-                            <table class="table mb-4">
+                            <table id='taskTableBody' class="table mb-4">
                                 <thead>
                                     <tr>
                                         <th scope="col">#</th>
@@ -55,12 +52,12 @@
                                             <td>{{ $task->status }}</td>
                                             <td>
                                                 @if ($task->status !== 'Done')
-                                                    <button type="submit" id='completeBtn' data-mdb-button-init
-                                                        data-mdb-ripple-init
-                                                        class="btn btn-success ms-1">Finish</button>
+                                                    <button data-id="{{ $task->id }}" data-mdb-ripple-init
+                                                        class="completeBtn btn btn-success ms-1">Complete</button>
                                                 @endif
-                                                <button type="submit" data-mdb-button-init data-mdb-ripple-init
-                                                    class="btn btn-danger">Delete</button>
+                                                <button data-id="{{ $task->id }}" data-mdb-button-init
+                                                    data-mdb-ripple-init
+                                                    class="btn btn-danger deleteBtn">Remove</button>
                                             </td>
                                         </tr>
                                     @endforeach
@@ -74,22 +71,107 @@
         </div>
     </section>
 
-
-
     <script src="{{ asset('bootstrap.bundle.min.js') }}"></script>
     <script src="{{ asset('jquery-3.7.1.min.js') }}"></script>
     <script>
         $(document).ready(function() {
-            $("#completeBtn").click(function() {
+            function saveTask() {
+                var taskName = $("#name").val();
                 $.ajax({
                     type: 'POST',
-                    data:{id:},
-                    url: "{{ route('post.delete') }}",
+                    url: "{{ route('task.store') }}",
+                    data: {
+                        name: taskName
+                    },
                     success: function(response) {
-                        console.log(respose)
+                        if (response.status) {
+                            var newTask = response.task;
+                            var newRow = '<tr>' +
+                                '<th scope="row">' + newTask.id + '</th>' +
+                                '<td>' + newTask.name + '</td>' +
+                                '<td>' + newTask.status + '</td>' +
+                                '<td>' +
+                                '<button type="button" data-id="' + newTask.id +
+                                '" class="btn btn-success completeBtn">Complete</button>' +
+                                '<button type="button" data-id="' + newTask.id +
+                                '"class="btn btn-danger deleteBtn">Remove</button>' +
+                                '</td>' +
+                                '</tr>';
+                            $("#taskTableBody").append(
+                                newRow);
+                        } else {
+                            var errors = response.errors;
+                            var errorMessage = '<ul>';
+                            for (var key in errors) {
+                                errorMessage += '<li>' + errors[key][0] + '</li>';
+                            }
+                            errorMessage += '</ul>';
+                            $('#alertContainer').html('<div class="alert alert-danger">' +
+                                errorMessage + '</div>');
+                        }
+                    },
+                    error: function(xhr, status, error) {
+                        $('#alertContainer').html('<div class="alert alert-danger">' +
+                            xhr.responseJSON.message + '</div>');
                     }
                 });
-                $(this).fadeOut();
+            }
+            $("#saveTaskBtn").click(saveTask);
+            $("#name").keydown(function(event) {
+                if (event.keyCode === 13) {
+                    event.preventDefault();
+                    saveTask();
+                }
+            });
+
+            $(document).on('click', '.completeBtn', function() {
+                var taskId = $(this).data('id');
+                var button = $(this);
+
+                $.ajax({
+                    type: 'POST',
+                    url: "{{ route('task.complete') }}",
+                    data: {
+                        id: taskId
+                    },
+                    success: function(response) {
+                        if (response.success) {
+                            button.hide();
+                            button.parent().prev().text('Done');
+                        } else {
+                            alert('Failed to complete task.');
+                        }
+                    },
+                    error: function(xhr, status, error) {
+                        $('#alertContainer').html('<div class="alert alert-danger">' +
+                            xhr.responseJSON.message + '</div>');
+                    }
+                });
+            });
+            $(document).on('click', '.deleteBtn', function() {
+                var taskId = $(this).data('id');
+                var row = $(this).closest('tr');
+
+                if (confirm('Are you sure you want to delete this task?')) {
+                    $.ajax({
+                        type: 'POST',
+                        url: "{{ route('task.delete') }}",
+                        data: {
+                            id: taskId
+                        },
+                        success: function(response) {
+                            if (response.success) {
+                                row.remove();
+                            } else {
+                                alert('Failed to delete task.');
+                            }
+                        },
+                        error: function(xhr, status, error) {
+                            $('#alertContainer').html('<div class="alert alert-danger">' +
+                                xhr.responseJSON.message + '</div>');
+                        }
+                    });
+                }
             });
         });
     </script>
