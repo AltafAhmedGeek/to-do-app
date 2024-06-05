@@ -1,5 +1,7 @@
 <?php
 
+use App\Models\TaskModel;
+use Illuminate\Console\View\Components\Task;
 use Illuminate\Support\Facades\Route;
 
 /*
@@ -14,5 +16,6 @@ use Illuminate\Support\Facades\Route;
 */
 
 Route::get('/', function () {
-    return view('welcome');
+    $tasks = TaskModel::get();
+    return view('tasks',compact('tasks'));
 });
