@@ -20,4 +20,6 @@ Route::get('/', function () {
     return TaskModel::all();
 });
 
-Route::post('/post/delete/{id}', [TaskController::class, 'destroy'])->name('post.delete');
+Route::post('/post/store/', [TaskController::class, 'store'])->name('task.store');
+Route::post('/post/completed/', [TaskController::class, 'completed'])->name('task.complete');
+Route::post('/post/delete/', [TaskController::class, 'destroy'])->name('task.delete');

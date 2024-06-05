@@ -8,40 +8,50 @@ use Illuminate\Support\Facades\Validator;
 
 class TaskController extends Controller
 {
+    public function index()
+    {
+        $tasks = TaskModel::get();
+        return view('tasks', compact('tasks'));
+    }
     public function store(Request $request)
     {
         $rules = [
-            'name' => 'required|unique:tasks|max:255',
+            'name' => "required|unique:task,name,NULL,id,deleted_at,NULL|max:255",
         ];
-        $validator = Validator::make($request->only('name'), $rules);
+        $validator = Validator::make($request->all(), $rules);
         if ($validator->fails()) {
-            return response()->json(['status' => false, 'errors' => $validator->errors()], 500);
+            return response()->json(['status' => false, 'errors' => $validator->errors()]);
         }
-        $task = TaskModel::create(
-            [
-                'name' => $request->name
-            ]
-        );
+        $task = TaskModel::create([
+            'name' => $request->name,
+            'status' => 'Pending'
+        ]);
         if ($task) {
             return response()->json(['status' => true, 'task' => $task]);
         }
         return response()->json(['status' => false], 500);
     }
-    public function completed(TaskModel $task)
+
+    public function completed(Request $request)
     {
-        $updated = $task->update(['status' => 'Done']);
-        if ($updated) {
-            return response()->json(['success' => true]);
+        $task = TaskModel::find($request->id);
+        if (!empty($task)) {
+            $updated = $task->update(['status' => 'Done']);
+            if ($updated) {
+                return response()->json(['success' => true]);
+            }
         }
         return response()->json(['success' => false], 500);
     }
-    public function destroy($id)
+    public function destroy(Request $request)
     {
-        $task = TaskModel::find($id);
-        if ($task->delete()) {
-            return response()->json(['status' => true]);
-        } else {
-            return response()->json(['status' => false], 500);
+        $task = TaskModel::find($request->id);
+        if (!empty($task)) {
+            $deleted = $task->delete();
+            if ($deleted) {
+                return response()->json(['success' => true]);
+            }
         }
+        return response()->json(['success' => false], 500);
     }
 }
